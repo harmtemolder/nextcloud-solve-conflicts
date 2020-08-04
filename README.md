@@ -1,2 +1,2 @@
 # nextcloud_solve_conflicts
-Parse the local nextcloud folder and solve conflicts by retaining the most recently modified file.
+This script parses the local nextcloud folder solving the conflicts by retaining the most recently modified file.
