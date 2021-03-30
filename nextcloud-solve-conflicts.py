@@ -9,7 +9,15 @@ def ensure(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
-rootdir = Path('~/Nimbus/Books').expanduser()
+rootdir_question = inquirer.Path(
+    'rootdir',
+    message='For what path do you want to solve sync conflicts?',
+    default='~/Nimbus/',
+    path_type='directory',
+    exists=True,
+    normalize_to_absolute_path=True
+)
+rootdir = Path(inquirer.prompt([rootdir_question])['rootdir'])
 trashdir = rootdir / '.Trash'
 
 conflicts = rootdir.glob('**/* (conflicted copy *')
@@ -49,9 +57,9 @@ for conflict in conflicts:
     if answers['keep'] == conflict_choice:
         original.rename(ensure(trashdir / original_relative))
         conflict.rename(ensure(original))
-        print('Kept local file, moved server file to {}'.format(trashdir))
+        print(' = Kept local file, moved server file to {}'.format(trashdir))
     elif answers['keep'] == original_choice:
         conflict.rename(ensure(trashdir / conflict_relative.parent / original.name))
-        print('Kept server file, moved local file to {}'.format(trashdir))
+        print(' = Kept server file, moved local file to {}'.format(trashdir))
     elif answers['keep'] == 'quit':
         break
