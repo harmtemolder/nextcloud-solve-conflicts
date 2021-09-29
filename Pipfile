@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 inquirer = "*"
+colorama = "*"
 
 [dev-packages]
 

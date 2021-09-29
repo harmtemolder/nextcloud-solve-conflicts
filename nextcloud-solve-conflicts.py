@@ -5,6 +5,7 @@ import difflib
 from pathlib import Path, PurePath
 import termios
 
+from colorama import init, Fore
 import inquirer
 
 def ensure(path):
@@ -13,6 +14,8 @@ def ensure(path):
 
 
 if __name__ == '__main__':
+    init()
+
     default_rootdir = '~/Notes/'
 
     try:
@@ -70,11 +73,13 @@ if __name__ == '__main__':
         conflict_mtime = datetime.fromtimestamp(conflict.stat().st_mtime)
         original_mtime = datetime.fromtimestamp(original.stat().st_mtime)
 
-        conflict_choice = '[{}] {}'.format(
+        conflict_choice = '{}[{}] {}'.format(
+            Fore.RED,
             conflict_mtime.isoformat(timespec='seconds'),
             conflict_relative,
         )
-        original_choice = '[{}] {}'.format(
+        original_choice = '{}[{}] {}'.format(
+            Fore.GREEN,
             original_mtime.isoformat(timespec='seconds'),
             original_relative,
         )
@@ -89,8 +94,14 @@ if __name__ == '__main__':
                         str(conflict_relative),
                         str(original_relative),
                     ))
-            print(''.join(filter(lambda line: line[0] in ['-', '+', '@'], diffs)))
-
+            for diff in diffs:
+                if diff[0] == '-':
+                    print(Fore.RED + diff, end='')
+                elif diff[0] == '+':
+                    print(Fore.GREEN + diff, end='')
+                elif diff[0] == '@':
+                    print(Fore.RESET + diff, end='')
+            print(Fore.RESET + '\n')
 
         questions = [inquirer.List(
             'keep',
@@ -105,9 +116,9 @@ if __name__ == '__main__':
         if answers['keep'] == conflict_choice:
             original.rename(ensure(trashdir / original_relative))
             conflict.rename(ensure(original))
-            print(' = Kept local file, moved server file to {}'.format(trashdir))
+            print(Fore.BLUE + '[!] Kept local file, moved server file to {}\n'.format(trashdir))
         elif answers['keep'] == original_choice:
             conflict.rename(ensure(trashdir / conflict_relative.parent / original.name))
-            print(' = Kept server file, moved local file to {}'.format(trashdir))
+            print(Fore.BLUE + '[!] Kept server file, moved local file to {}\n'.format(trashdir))
         elif answers['keep'] == 'quit':
             break
