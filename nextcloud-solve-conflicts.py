@@ -13,6 +13,7 @@ def ensure(path):
 
 if __name__ == '__main__':
     default_rootdir = '~/Nimbus/'
+
     try:
         rootdir_question = inquirer.Path(
             'rootdir',
@@ -25,13 +26,18 @@ if __name__ == '__main__':
         rootdir = Path(inquirer.prompt([rootdir_question])['rootdir'])
     except termios.error as e:
         rootdir = Path(default_rootdir)
+
+    rootdir = rootdir.expanduser()
     trashdir = rootdir / '.Trash-1000'
 
-    conflicts = rootdir.glob('**/* (conflicted copy *')
+    conflict_string = '.sync-conflict-'  # Syncthing
+    # conflict_string = ' (conflicted copy '  # Nextcloud
+
+    conflicts = rootdir.glob('**/*{}*'.format(conflict_string))
 
     for conflict in conflicts:
         original = (conflict.parent / Path(
-            conflict.stem[:conflict.stem.find(" (conflicted copy ")]
+            conflict.stem[:conflict.stem.find(conflict_string)]
             + conflict.suffix))
 
         if not original.exists():
