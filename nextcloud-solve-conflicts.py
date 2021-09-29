@@ -30,8 +30,26 @@ if __name__ == '__main__':
     rootdir = rootdir.expanduser()
     trashdir = rootdir / '.Trash-1000'
 
-    conflict_string = '.sync-conflict-'  # Syncthing
-    # conflict_string = ' (conflicted copy '  # Nextcloud
+
+
+    conflict_strings = {
+        'Syncthing': '.sync-conflict-',
+        'Nextcloud': ' (conflicted copy '
+    }
+
+    try:
+        type_question = inquirer.List(
+            'type',
+            message='What type of sync conflicts do you want to solve?',
+            choices=[
+                'Nextcloud',
+                'Syncthing'
+            ],
+            carousel=True
+        )
+        conflict_string = conflict_strings[inquirer.prompt([type_question])['type']]
+    except termios.error as e:
+        conflict_string = conflict_strings['Syncthing']
 
     conflicts = rootdir.glob('**/*{}*'.format(conflict_string))
 
