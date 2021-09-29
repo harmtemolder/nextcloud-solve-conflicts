@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from datetime import datetime
+import difflib
 from pathlib import Path, PurePath
 import termios
 
@@ -12,7 +13,7 @@ def ensure(path):
 
 
 if __name__ == '__main__':
-    default_rootdir = '~/Nimbus/'
+    default_rootdir = '~/Notes/'
 
     try:
         rootdir_question = inquirer.Path(
@@ -45,6 +46,7 @@ if __name__ == '__main__':
                 'Nextcloud',
                 'Syncthing'
             ],
+            default='Syncthing',
             carousel=True
         )
         conflict_string = conflict_strings[inquirer.prompt([type_question])['type']]
@@ -68,19 +70,34 @@ if __name__ == '__main__':
         conflict_mtime = datetime.fromtimestamp(conflict.stat().st_mtime)
         original_mtime = datetime.fromtimestamp(original.stat().st_mtime)
 
-        conflict_choice = 'Local  ({}): {}'.format(
+        conflict_choice = '[{}] {}'.format(
             conflict_mtime.isoformat(timespec='seconds'),
             conflict_relative,
         )
-        original_choice = 'Server ({}): {}'.format(
+        original_choice = '[{}] {}'.format(
             original_mtime.isoformat(timespec='seconds'),
             original_relative,
         )
 
+        # Print out the actual differences for plain text files
+        if conflict.suffix in ['.txt', '.md']:
+            with conflict.open(mode='r') as conflict_open:
+                with original.open(mode='r') as original_open:
+                    diffs = list(difflib.unified_diff(
+                        conflict_open.readlines(),
+                        original_open.readlines(),
+                        str(conflict_relative),
+                        str(original_relative),
+                    ))
+            print(''.join(filter(lambda line: line[0] in ['-', '+', '@'], diffs)))
+
+
         questions = [inquirer.List(
             'keep',
             message='Which file(s) do you want to keep?',
-            choices=[conflict_choice, original_choice, 'both', 'quit']
+            choices=[conflict_choice, original_choice, 'both', 'quit'],
+            default=original_choice,
+            carousel=True
         )]
 
         answers = inquirer.prompt(questions)
