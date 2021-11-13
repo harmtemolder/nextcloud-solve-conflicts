@@ -5,8 +5,9 @@ import difflib
 from pathlib import Path, PurePath
 import termios
 
-from colorama import init, Fore
+from colorama import init, Fore, Back
 import inquirer
+
 
 def ensure(path):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -34,8 +35,6 @@ if __name__ == '__main__':
     rootdir = rootdir.expanduser()
     trashdir = rootdir / '.Trash-1000'
 
-
-
     conflict_strings = {
         'Syncthing': '.sync-conflict-',
         'Nextcloud': ' (conflicted copy '
@@ -52,7 +51,8 @@ if __name__ == '__main__':
             default='Syncthing',
             carousel=True
         )
-        conflict_string = conflict_strings[inquirer.prompt([type_question])['type']]
+        conflict_string = conflict_strings[
+            inquirer.prompt([type_question])['type']]
     except termios.error as e:
         conflict_string = conflict_strings['Syncthing']
 
@@ -61,7 +61,8 @@ if __name__ == '__main__':
     for conflict in conflicts:
         original = (conflict.parent / Path(
             conflict.stem[:conflict.stem.find(conflict_string)]
-            + conflict.suffix))
+            + conflict.suffix
+        ))
 
         if not original.exists():
             conflict.rename(original)
@@ -88,19 +89,31 @@ if __name__ == '__main__':
         if conflict.suffix in ['.txt', '.md']:
             with conflict.open(mode='r') as conflict_open:
                 with original.open(mode='r') as original_open:
-                    diffs = list(difflib.unified_diff(
-                        conflict_open.readlines(),
-                        original_open.readlines(),
-                        str(conflict_relative),
-                        str(original_relative),
-                    ))
+                    diffs = list(
+                        difflib.unified_diff(
+                            conflict_open.readlines(),
+                            original_open.readlines(),
+                            str(conflict_relative),
+                            str(original_relative),
+                        )
+                    )
             for diff in diffs:
-                if diff[0] == '-':
-                    print(Fore.RED + diff, end='')
+                if diff[0:4] == '--- ':
+                    print(
+                        Back.RED + Fore.WHITE + diff + Back.RESET + Fore.RESET,
+                        end=''
+                    )
+                elif diff[0:4] == '+++ ':
+                    print(
+                        Back.GREEN + Fore.WHITE + diff + Back.RESET + Fore.RESET,
+                        end=''
+                    )
+                elif diff[0:3] == '@@ ':
+                    print(Back.RESET + Fore.RESET + diff, end='')
+                elif diff[0] == '-':
+                    print(Fore.RED + diff + Fore.RESET, end='')
                 elif diff[0] == '+':
-                    print(Fore.GREEN + diff, end='')
-                elif diff[0] == '@':
-                    print(Fore.RESET + diff, end='')
+                    print(Fore.GREEN + diff + Fore.RESET, end='')
             print(Fore.RESET + '\n')
 
         questions = [inquirer.List(
@@ -116,9 +129,19 @@ if __name__ == '__main__':
         if answers['keep'] == conflict_choice:
             original.rename(ensure(trashdir / original_relative))
             conflict.rename(ensure(original))
-            print(Fore.BLUE + '[!] Kept local file, moved server file to {}\n'.format(trashdir))
+            print(
+                Fore.BLUE + '[!] Kept local file, moved server file to {}\n'.format(
+                    trashdir
+                )
+            )
         elif answers['keep'] == original_choice:
-            conflict.rename(ensure(trashdir / conflict_relative.parent / original.name))
-            print(Fore.BLUE + '[!] Kept server file, moved local file to {}\n'.format(trashdir))
+            conflict.rename(
+                ensure(trashdir / conflict_relative.parent / conflict.name)
+            )
+            print(
+                Fore.BLUE + '[!] Kept server file, moved local file to {}\n'.format(
+                    trashdir
+                )
+            )
         elif answers['keep'] == 'quit':
             break
