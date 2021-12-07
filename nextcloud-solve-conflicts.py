@@ -3,10 +3,14 @@
 from datetime import datetime
 import difflib
 from pathlib import Path, PurePath
+import subprocess
 import termios
 
 from colorama import init, Fore, Back
 import inquirer
+
+DEFAULT_ROOT = '~/Notes/'
+TRASH = '.Trash-1000'
 
 
 def ensure(path):
@@ -14,26 +18,35 @@ def ensure(path):
     return path
 
 
-if __name__ == '__main__':
+def main():
+    # colorama.init
     init()
 
-    default_rootdir = '~/Notes/'
+    # Get git's merge tool so it may be used for conflicts
+    try:
+        git_config_merge_tool = subprocess.run(
+            ['git', 'config', 'merge.tool'],
+            capture_output=True
+        )
+        merge_tool = git_config_merge_tool.stdout.decode().strip()
+    except:
+        merge_tool = None
 
     try:
         rootdir_question = inquirer.Path(
             'rootdir',
             message='For what path do you want to solve sync conflicts?',
-            default=default_rootdir,
+            default=DEFAULT_ROOT,
             path_type='directory',
             exists=True,
             normalize_to_absolute_path=True
         )
         rootdir = Path(inquirer.prompt([rootdir_question])['rootdir'])
     except termios.error as e:
-        rootdir = Path(default_rootdir)
+        rootdir = Path(DEFAULT_ROOT)
 
     rootdir = rootdir.expanduser()
-    trashdir = rootdir / '.Trash-1000'
+    trashdir = rootdir / TRASH
 
     conflict_strings = {
         'Syncthing': '.sync-conflict-',
@@ -85,8 +98,10 @@ if __name__ == '__main__':
             original_relative,
         )
 
+        choices = [conflict_choice, original_choice, 'both', 'quit']
+
         # Print out the actual differences for plain text files
-        if conflict.suffix in ['.txt', '.md']:
+        if conflict.suffix in ['.txt', '.md', '.json']:
             with conflict.open(mode='r') as conflict_open:
                 with original.open(mode='r') as original_open:
                     diffs = list(
@@ -116,10 +131,15 @@ if __name__ == '__main__':
                     print(Fore.GREEN + diff + Fore.RESET, end='')
             print(Fore.RESET + '\n')
 
+            # And add an option to use the merge tool selected for git
+            if merge_tool:
+                choices.insert(2, merge_tool)
+
+
         questions = [inquirer.List(
             'keep',
             message='Which file(s) do you want to keep?',
-            choices=[conflict_choice, original_choice, 'both', 'quit'],
+            choices=choices,
             default=original_choice,
             carousel=True
         )]
@@ -145,3 +165,9 @@ if __name__ == '__main__':
             )
         elif answers['keep'] == 'quit':
             break
+        elif answers['keep'] == merge_tool:
+            subprocess.run([merge_tool, original, conflict])
+
+
+if __name__ == '__main__':
+    main()
