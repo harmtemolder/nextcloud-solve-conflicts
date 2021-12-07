@@ -26,15 +26,15 @@ def main():
     merge_tool = get_merge_tool()
 
     try:
-        rootdir_question = inquirer.Path(
-            'rootdir',
-            message='For what path do you want to solve sync conflicts?',
-            default=DEFAULT_ROOT,
-            path_type='directory',
-            exists=True,
-            normalize_to_absolute_path=True
+        rootdir = Path(
+            inquirer.shortcuts.path(
+                message='For what path do you want to solve sync conflicts?',
+                default=DEFAULT_ROOT,
+                path_type='directory',
+                exists=True,
+                normalize_to_absolute_path=True
+            )
         )
-        rootdir = Path(inquirer.prompt([rootdir_question])['rootdir'])
     except termios.error as e:
         rootdir = Path(DEFAULT_ROOT)
 
@@ -46,9 +46,14 @@ def main():
         'Nextcloud': ' (conflicted copy '
     }
 
-    conflicts = []
+    for conflict_source, conflict_string in conflict_strings.items():
+        print(
+            '\n[!] Solving {} conflicts in `{}`'.format(
+                conflict_source,
+                rootdir
+            )
+        )
 
-    for conflict_string in conflict_strings.values():
         conflicts = rootdir.glob('**/*{}*'.format(conflict_string))
 
         for conflict in conflicts:
@@ -119,17 +124,14 @@ def main():
                 if merge_tool:
                     choices.insert(2, merge_tool)
 
-            questions = [inquirer.List(
-                'keep',
+            keep = inquirer.list_input(
                 message='Which file(s) do you want to keep?',
                 choices=choices,
                 default=original_choice,
                 carousel=True
-            )]
+            )
 
-            answers = inquirer.prompt(questions)
-
-            if answers['keep'] == conflict_choice:
+            if keep == conflict_choice:
                 original.rename(ensure(trashdir / original_relative))
                 conflict.rename(ensure(original))
                 print(
@@ -137,7 +139,7 @@ def main():
                         trashdir
                     )
                 )
-            elif answers['keep'] == original_choice:
+            elif keep == original_choice:
                 conflict.rename(
                     ensure(trashdir / conflict_relative.parent / conflict.name)
                 )
@@ -146,9 +148,9 @@ def main():
                         trashdir
                     )
                 )
-            elif answers['keep'] == 'quit':
+            elif keep == 'quit':
                 break
-            elif answers['keep'] == merge_tool:
+            elif keep == merge_tool:
                 subprocess.run([merge_tool, original, conflict])
 
 
