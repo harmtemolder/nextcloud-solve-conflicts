@@ -146,7 +146,7 @@ def solve_conflict(conflict, conflict_string, merge_tool, root_dir, trash_dir):
             )
         )
     elif keep == merge_tool:
-        subprocess.run([merge_tool, original, conflict])
+        subprocess.run([merge_tool, original, original, conflict])
     elif keep == 'both':
         pass
     elif keep == 'quit':
