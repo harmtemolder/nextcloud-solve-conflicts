@@ -147,6 +147,14 @@ def solve_conflict(conflict, conflict_string, merge_tool, root_dir, trash_dir):
         )
     elif keep == merge_tool:
         subprocess.run([merge_tool, original, original, conflict])
+        conflict.rename(
+            ensure(trash_dir / conflict_relative.parent / conflict.name)
+        )
+        print(
+            Fore.BLUE + '[!] Kept merged file, moved other file to `{}`\n'.format(
+                trash_dir
+            )
+        )
     elif keep == 'both':
         pass
     elif keep == 'quit':
